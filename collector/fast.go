@@ -84,6 +84,7 @@ func (c *fastCollector) cachedOrCollect() (float64, error) {
 	if err != nil {
 		return hot, err
 	}
+	log.Debug("return result from api")
 	c.cache.Set("result", hot, cache.DefaultExpiration)
 	return hot, nil
 }
