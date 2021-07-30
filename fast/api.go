@@ -54,8 +54,7 @@ func doMeasure(url string) (int64, error) {
 		return 0, err
 	}
 	defer resp.Body.Close()
-	_, err = io.Copy(io.Discard, resp.Body)
-	return resp.ContentLength, err
+	return io.Copy(io.Discard, resp.Body)
 }
 
 func findURLs() []string {
