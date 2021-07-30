@@ -16,7 +16,7 @@ import (
 var (
 	bind     = kingpin.Flag("bind", "addr to bind the server").Short('b').Default(":9876").String()
 	debug    = kingpin.Flag("debug", "show debug logs").Default("false").Bool()
-	interval = kingpin.Flag("refresh.interval", "time between refreshes with fast.com").Default("5m").Duration()
+	interval = kingpin.Flag("refresh.interval", "time between refreshes with fast.com").Default("15m").Duration()
 	version  = "master"
 )
 
