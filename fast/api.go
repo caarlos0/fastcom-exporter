@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	baseURL       = "https://fast.com"
-	defaultURL    = "https://api.fast.com/netflix/speedtest"
-	userAgent     = "caarlos0/fastcom-exporter/v1"
+	baseURL    = "https://fast.com"
+	defaultURL = "https://api.fast.com/netflix/speedtest"
+	userAgent  = "caarlos0/fastcom-exporter/v1"
 )
 
 var (
@@ -54,7 +54,8 @@ func doMeasure(url string) (int64, error) {
 		return 0, err
 	}
 	defer resp.Body.Close()
-	return resp.ContentLength, nil
+	_, err = io.Copy(io.Discard, resp.Body)
+	return resp.ContentLength, err
 }
 
 func findURLs() []string {
@@ -113,11 +114,11 @@ func getPage(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-type measurementTransport struct {
-	read        int64
-	start, stop time.Time
-	decorated   http.RoundTripper
-}
+// type measurementTransport struct {
+// 	read        int64
+// 	start, stop time.Time
+// 	decorated   http.RoundTripper
+// }
 
 // func (t *measurementTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 // 	t.start = time.Now().UTC()

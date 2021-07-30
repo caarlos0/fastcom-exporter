@@ -8,5 +8,5 @@ import (
 
 func main() {
 	bps, err := fast.Measure()
-	fmt.Println(bps/1000000, err)
+	fmt.Println(bps/125000, err)
 }

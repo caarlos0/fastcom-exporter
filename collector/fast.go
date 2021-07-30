@@ -14,9 +14,9 @@ type fastCollector struct {
 	mutex sync.Mutex
 	cache *cache.Cache
 
-	up              *prometheus.Desc
-	scrapeDuration  *prometheus.Desc
-	downloadBytes   *prometheus.Desc
+	up             *prometheus.Desc
+	scrapeDuration *prometheus.Desc
+	downloadBytes  *prometheus.Desc
 }
 
 // NewFastCollector returns a fast.com collector
