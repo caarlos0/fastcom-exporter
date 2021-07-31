@@ -19,7 +19,7 @@ const (
 	baseURL               = "https://fast.com"
 	userAgent             = "caarlos0/fastcom-exporter/v1"
 	maxConcurrentRequests = 8                // from fast.com
-	maxTime               = time.Second * 10 // from fast.com
+	maxTime               = time.Second * 30 // from fast.com
 )
 
 var (
@@ -47,8 +47,12 @@ outer:
 		case <-ctx.Done():
 			break outer
 		default:
-			if err := sem.Acquire(ctx, 1); isUnexpectedError(err) {
-				return 0, err
+			err := sem.Acquire(ctx, 1)
+			if err != nil {
+				if !errors.Is(err, context.DeadlineExceeded) {
+					return 0, err
+				}
+				break outer
 			}
 			wg.Go(func() error {
 				defer sem.Release(1)
@@ -61,14 +65,10 @@ outer:
 		}
 	}
 
-	if err := wg.Wait(); isUnexpectedError(err) {
+	if err := wg.Wait(); err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		return 0, err
 	}
 	return float64(sumBytes) / time.Since(start).Seconds(), nil
-}
-
-func isUnexpectedError(err error) bool {
-	return err != nil && !errors.Is(err, context.DeadlineExceeded)
 }
 
 func doMeasure(ctx context.Context, url string) (int64, error) {
