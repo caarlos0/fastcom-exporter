@@ -1,6 +1,8 @@
 package fast
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,12 +12,15 @@ import (
 
 	"github.com/prometheus/common/log"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
-	baseURL    = "https://fast.com"
-	defaultURL = "https://api.fast.com/netflix/speedtest"
-	userAgent  = "caarlos0/fastcom-exporter/v1"
+	baseURL               = "https://fast.com"
+	defaultURL            = "https://api.fast.com/netflix/speedtest"
+	userAgent             = "caarlos0/fastcom-exporter/v1"
+	maxConcurrentRequests = 8                // from fast.com
+	maxTime               = time.Second * 10 // from fast.com
 )
 
 var (
@@ -27,24 +32,50 @@ var (
 func Measure() (float64, error) {
 	var wg errgroup.Group
 	var sumBytes int64
+	var idx int32
+
 	urls := findURLs()
+	sem := semaphore.NewWeighted(maxConcurrentRequests)
+
+	ctx, cancel := context.WithTimeout(context.Background(), maxTime)
+	defer cancel()
 
 	start := time.Now()
-	for _, url := range urls {
-		url := url
-		wg.Go(func() error {
-			bytes, err := doMeasure(url)
-			atomic.AddInt64(&sumBytes, bytes)
-			return err
-		})
+
+outer:
+	for {
+		select {
+		case <-ctx.Done():
+			break outer
+		default:
+			if err := sem.Acquire(ctx, 1); isUnexpectedError(err) {
+				return 0, err
+			}
+			wg.Go(func() error {
+				url := urls[int(idx)%len(urls)]
+				atomic.AddInt32(&idx, 1)
+				defer func() {
+					sem.Release(1)
+				}()
+				bytes, err := doMeasure(ctx, url)
+				atomic.AddInt64(&sumBytes, bytes)
+				return err
+			})
+		}
 	}
 
-	err := wg.Wait()
-	return float64(sumBytes) / time.Since(start).Seconds(), err
+	if err := wg.Wait(); isUnexpectedError(err) {
+		return 0, err
+	}
+	return float64(sumBytes) / time.Since(start).Seconds(), nil
 }
 
-func doMeasure(url string) (int64, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+func isUnexpectedError(err error) bool {
+	return err != nil && !errors.Is(err, context.DeadlineExceeded)
+}
+
+func doMeasure(ctx context.Context, url string) (int64, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return 0, err
 	}
