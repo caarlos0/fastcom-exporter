@@ -52,11 +52,9 @@ outer:
 				return 0, err
 			}
 			wg.Go(func() error {
+				defer sem.Release(1)
 				url := urls[int(idx)%len(urls)]
 				atomic.AddInt32(&idx, 1)
-				defer func() {
-					sem.Release(1)
-				}()
 				bytes, err := doMeasure(ctx, url)
 				atomic.AddInt64(&sumBytes, bytes)
 				return err
@@ -143,25 +141,3 @@ func getPage(url string) ([]byte, error) {
 
 	return io.ReadAll(resp.Body)
 }
-
-// type measurementTransport struct {
-// 	read        int64
-// 	start, stop time.Time
-// 	decorated   http.RoundTripper
-// }
-
-// func (t *measurementTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-// 	t.start = time.Now().UTC()
-// 	resp, err := t.decorated.RoundTrip(req)
-// 	t.stop = time.Now().UTC()
-// 	t.read += resp.ContentLength
-// 	return resp, err
-// }
-
-// func (t *measurementTransport) Bytes() int64 {
-// 	return t.read
-// }
-
-// func (t *measurementTransport) Seconds() float64 {
-// 	return t.stop.Sub(t.start).Seconds()
-// }
