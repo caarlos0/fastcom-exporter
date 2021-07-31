@@ -17,7 +17,6 @@ import (
 
 const (
 	baseURL               = "https://fast.com"
-	defaultURL            = "https://api.fast.com/netflix/speedtest"
 	userAgent             = "caarlos0/fastcom-exporter/v1"
 	maxConcurrentRequests = 8                // from fast.com
 	maxTime               = time.Second * 10 // from fast.com
@@ -88,9 +87,7 @@ func doMeasure(ctx context.Context, url string) (int64, error) {
 
 func findURLs() []string {
 	token := getToken()
-
 	url := fmt.Sprintf("https://api.fast.com/netflix/speedtest/v2?https=true&token=%s&urlCount=5", token)
-	// fmt.Printf("url=%s\n", url)
 	log.Debugf("getting url list from %s", url)
 
 	jsonData, err := getPage(url)
@@ -101,7 +98,7 @@ func findURLs() []string {
 	var urls []string
 	for _, url := range urlRE.FindAllStringSubmatch(string(jsonData), -1) {
 		urls = append(urls, url[1])
-		log.Debugf("url: %s", url[1])
+		log.Debugf("got url: %s", url[1])
 	}
 
 	return urls
