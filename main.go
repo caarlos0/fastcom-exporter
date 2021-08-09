@@ -3,13 +3,15 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/caarlos0/fastcom-exporter/collector"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
 )
 
 // nolint: gochecknoglobals
@@ -24,14 +26,17 @@ func main() {
 	kingpin.Version("fastcom-exporter version " + version)
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
-	log.Info("starting fastcom-exporter", version)
 
+	logger := log.NewLogfmtLogger(os.Stderr)
 	if *debug {
-		_ = log.Base().SetLevel("debug")
-		log.Debug("enabled debug mode")
+		logger = level.NewFilter(logger, level.AllowDebug())
+	} else {
+		logger = level.NewFilter(logger, level.AllowInfo())
 	}
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+	level.Info(logger).Log("msg", "starting fastcom-exporter", "version", version)
 
-	prometheus.MustRegister(collector.NewFastCollector(cache.New(*interval, *interval)))
+	prometheus.MustRegister(collector.NewFastCollector(logger, cache.New(*interval, *interval)))
 	http.Handle("/metrics", promhttp.Handler())
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -47,8 +52,8 @@ func main() {
 			`,
 		)
 	})
-	log.Info("listening on " + *bind)
+	level.Info(logger).Log("msg", "listening on "+*bind)
 	if err := http.ListenAndServe(*bind, nil); err != nil {
-		log.Fatalf("error starting server: %s", err)
+		level.Error(logger).Log("msg", "error listening", "addr", *bind, "err", err)
 	}
 }
