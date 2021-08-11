@@ -97,6 +97,9 @@ func findURLs() []string {
 
 	var urls []string
 	for _, url := range urlRE.FindAllStringSubmatch(string(jsonData), -1) {
+		if len(url) == 0 {
+			continue
+		}
 		urls = append(urls, url[1])
 		log.Debug().Str("url", urls[1]).Msg("got url")
 	}
