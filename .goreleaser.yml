@@ -1,6 +1,8 @@
 variables:
   homepage: https://github.com/caarlos0/fastcom-exporter
+  repository: https://github.com/caarlos0/fastcom-exporter
   description: Exports Fast.com results to the Prometheus format
+
 includes:
   - from_url:
       url: https://raw.githubusercontent.com/caarlos0/goreleaserfiles/main/build.yml
