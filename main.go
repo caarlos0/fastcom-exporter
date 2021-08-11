@@ -7,17 +7,18 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/caarlos0/fastcom-exporter/collector"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // nolint: gochecknoglobals
 var (
 	bind     = kingpin.Flag("bind", "addr to bind the server").Short('b').Default(":9877").String()
 	debug    = kingpin.Flag("debug", "show debug logs").Default("false").Bool()
+	format   = kingpin.Flag("logFormat", "log format to use").Default("console").Enum("json", "console")
 	interval = kingpin.Flag("refresh.interval", "time between refreshes with fast.com").Default("15m").Duration()
 	version  = "master"
 )
@@ -27,16 +28,17 @@ func main() {
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	logger := log.NewLogfmtLogger(os.Stderr)
-	if *debug {
-		logger = level.NewFilter(logger, level.AllowDebug())
-	} else {
-		logger = level.NewFilter(logger, level.AllowInfo())
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if *format == "console" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-	level.Info(logger).Log("msg", "starting fastcom-exporter", "version", version)
+	if *debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		log.Debug().Msg("enabled debug mode")
+	}
+	log.Info().Msgf("starting fastcom-exporter %s", version)
 
-	prometheus.MustRegister(collector.NewFastCollector(logger, cache.New(*interval, *interval)))
+	prometheus.MustRegister(collector.NewFastCollector(cache.New(*interval, *interval)))
 	http.Handle("/metrics", promhttp.Handler())
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -52,8 +54,8 @@ func main() {
 			`,
 		)
 	})
-	level.Info(logger).Log("msg", "listening on "+*bind)
+	log.Info().Msgf("listening on %s", *bind)
 	if err := http.ListenAndServe(*bind, nil); err != nil {
-		level.Error(logger).Log("msg", "error listening", "addr", *bind, "err", err)
+		log.Fatal().Err(err).Msg("error starting server")
 	}
 }

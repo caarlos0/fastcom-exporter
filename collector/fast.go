@@ -5,10 +5,9 @@ import (
 	"time"
 
 	"github.com/caarlos0/fastcom-exporter/fast"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog/log"
 )
 
 type fastCollector struct {
@@ -18,15 +17,13 @@ type fastCollector struct {
 	up             *prometheus.Desc
 	scrapeDuration *prometheus.Desc
 	downloadBytes  *prometheus.Desc
-	logger         log.Logger
 }
 
 // NewFastCollector returns a fast.com collector
-func NewFastCollector(logger log.Logger, cache *cache.Cache) prometheus.Collector {
+func NewFastCollector(cache *cache.Cache) prometheus.Collector {
 	const namespace = "fastcom"
 	return &fastCollector{
-		cache:  cache,
-		logger: logger,
+		cache: cache,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
 			"Exporter is up",
@@ -70,7 +67,7 @@ func (c *fastCollector) Collect(ch chan<- prometheus.Metric) {
 	result, err := c.cachedOrCollect()
 	if err != nil {
 		success = 0
-		level.Error(c.logger).Log("msg", "fast.com collector failed", "err", err)
+		log.Error().Err(err).Msg("fast.com collector failed")
 	}
 
 	ch <- prometheus.MustNewConstMetric(c.downloadBytes, prometheus.GaugeValue, result)
@@ -79,7 +76,7 @@ func (c *fastCollector) Collect(ch chan<- prometheus.Metric) {
 func (c *fastCollector) cachedOrCollect() (float64, error) {
 	cold, ok := c.cache.Get("result")
 	if ok {
-		level.Debug(c.logger).Log("msg", "returning results from cache")
+		log.Debug().Msg("returning results from cache")
 		return cold.(float64), nil
 	}
 
@@ -87,12 +84,12 @@ func (c *fastCollector) cachedOrCollect() (float64, error) {
 	if err != nil {
 		return hot, err
 	}
-	level.Debug(c.logger).Log("msg", "returning results from api")
+	log.Debug().Msg("returning results from api")
 	c.cache.Set("result", hot, cache.DefaultExpiration)
 	return hot, nil
 }
 
 func (c *fastCollector) collect() (float64, error) {
-	level.Debug(c.logger).Log("msg", "collecting fast.com metrics")
-	return fast.Measure(c.logger)
+	log.Debug().Msg("collecting fast.com metrics")
+	return fast.Measure()
 }

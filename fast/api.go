@@ -10,8 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
@@ -29,12 +28,12 @@ var (
 	tokenRE = regexp.MustCompile(`token:"[[:alpha:]]*"`)
 )
 
-func Measure(logger log.Logger) (float64, error) {
+func Measure() (float64, error) {
 	var wg errgroup.Group
 	var sumBytes int64
 	var idx int32
 
-	urls := findURLs(logger)
+	urls := findURLs()
 	sem := semaphore.NewWeighted(maxConcurrentRequests)
 
 	ctx, cancel := context.WithTimeout(context.Background(), maxTime)
@@ -86,29 +85,29 @@ func doMeasure(ctx context.Context, url string) (int64, error) {
 	return io.Copy(io.Discard, resp.Body)
 }
 
-func findURLs(logger log.Logger) []string {
-	token := getToken(logger)
+func findURLs() []string {
+	token := getToken()
 	url := fmt.Sprintf("https://api.fast.com/netflix/speedtest/v2?https=true&token=%s&urlCount=5", token)
-	level.Debug(logger).Log("msg", "getting url list from "+url)
+	log.Debug().Msgf("getting url list from %s", url)
 
 	jsonData, err := getPage(url)
 	if err != nil {
-		level.Error(logger).Log("msg", "error getting fast page "+url, "err", err)
+		log.Error().Err(err).Msgf("error getting fast page %s", url)
 	}
 
 	var urls []string
 	for _, url := range urlRE.FindAllStringSubmatch(string(jsonData), -1) {
 		urls = append(urls, url[1])
-		level.Debug(logger).Log("msg", "got url", "url", url[1])
+		log.Debug().Str("url", urls[1]).Msg("got url")
 	}
 
 	return urls
 }
 
-func getToken(logger log.Logger) string {
+func getToken() string {
 	fastBody, err := getPage(baseURL)
 	if err != nil {
-		level.Error(logger).Log("msg", "error getting fast page", "err", err)
+		log.Error().Err(err).Msg("error getting fast page")
 	}
 
 	scriptNames := jsRE.FindAllString(string(fastBody), 1)
@@ -116,16 +115,16 @@ func getToken(logger log.Logger) string {
 
 	scriptBody, err := getPage(scriptURL)
 	if err != nil {
-		level.Error(logger).Log("msg", "error getting fast page", "err", err)
+		log.Error().Err(err).Msg("error getting fast page")
 	}
 	tokens := tokenRE.FindAllString(string(scriptBody), 1)
 
 	if len(tokens) > 0 {
 		token := tokens[0][7 : len(tokens[0])-1]
-		level.Debug(logger).Log("msg", "found token", "token", token)
+		log.Debug().Str("token", token).Msg("found token")
 		return token
 	}
-	level.Warn(logger).Log("msg", "no token found")
+	log.Warn().Msg("no token found")
 	return ""
 }
 
