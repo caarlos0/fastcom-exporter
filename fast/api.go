@@ -101,7 +101,7 @@ func findURLs() []string {
 			continue
 		}
 		urls = append(urls, url[1])
-		log.Debug().Str("url", urls[1]).Msg("got url")
+		log.Debug().Str("url", url[1]).Msg("got url")
 	}
 
 	return urls
