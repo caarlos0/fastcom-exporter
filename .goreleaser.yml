@@ -5,17 +5,107 @@ variables:
 
 includes:
   - from_url:
-      url: https://raw.githubusercontent.com/caarlos0/goreleaserfiles/main/build.yml
-  - from_url:
       url: https://raw.githubusercontent.com/caarlos0/goreleaserfiles/main/release.yml
   - from_url:
       url: https://raw.githubusercontent.com/caarlos0/goreleaserfiles/main/package.yml
-  - from_url:
-      url: https://raw.githubusercontent.com/caarlos0/goreleaserfiles/main/podman.yml
 
 before:
   hooks:
     - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - 7
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: darwin
+        goarch: arm
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .Commit }} -X main.date={{ .CommitDate }} -X main.builtBy=goreleaser
+
+dockers:
+  - image_templates:
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-amd64"
+    dockerfile: Dockerfile
+    use: podman
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{ with .repository }}{{ . }}{{ else }}https://github.com/caarlos0/{{ .ProjectName }}{{ end }}"
+      - "--platform=linux/amd64"
+  - image_templates:
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-arm64"
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-arm64"
+    dockerfile: Dockerfile
+    use: podman
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{ with .repository }}{{ . }}{{ else }}https://github.com/caarlos0/{{ .ProjectName }}{{ end }}"
+      - "--platform=linux/arm64"
+    goarch: arm64
+  - image_templates:
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-armv7"
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-armv7"
+    dockerfile: Dockerfile
+    use: podman
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{ with .repository }}{{ . }}{{ else }}https://github.com/caarlos0/{{ .ProjectName }}{{ end }}"
+      - "--platform=linux/arm/v7"
+    goarch: arm
+    goarm: 7
+
+docker_manifests:
+  - name_template: "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}"
+    use: podman
+    image_templates:
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-arm64"
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-armv7"
+  - name_template: "ghcr.io/caarlos0/{{ .ProjectName }}:latest"
+    use: podman
+    image_templates:
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-arm64"
+      - "ghcr.io/caarlos0/{{ .ProjectName }}:{{ .Tag }}-armv7"
+  - name_template: "caarlos0/{{ .ProjectName }}:{{ .Tag }}"
+    use: podman
+    image_templates:
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-arm64"
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-armv7"
+  - name_template: "caarlos0/{{ .ProjectName }}:latest"
+    use: podman
+    image_templates:
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-amd64"
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-arm64"
+      - "caarlos0/{{ .ProjectName }}:{{ .Tag }}-armv7"
 
 furies:
 - account: caarlos0
