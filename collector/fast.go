@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/caarlos0/fastcom-exporter/fast"
+	"github.com/charmbracelet/log"
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rs/zerolog/log"
 )
 
 type fastCollector struct {
@@ -67,7 +67,7 @@ func (c *fastCollector) Collect(ch chan<- prometheus.Metric) {
 	result, err := c.cachedOrCollect()
 	if err != nil {
 		success = 0
-		log.Error().Err(err).Msg("fast.com collector failed")
+		log.Error("fast.com collector failed", "err", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(c.downloadBytes, prometheus.GaugeValue, result)
@@ -76,7 +76,7 @@ func (c *fastCollector) Collect(ch chan<- prometheus.Metric) {
 func (c *fastCollector) cachedOrCollect() (float64, error) {
 	cold, ok := c.cache.Get("result")
 	if ok {
-		log.Debug().Msg("returning results from cache")
+		log.Debug("returning results from cache")
 		return cold.(float64), nil
 	}
 
@@ -84,12 +84,12 @@ func (c *fastCollector) cachedOrCollect() (float64, error) {
 	if err != nil {
 		return hot, err
 	}
-	log.Debug().Msg("returning results from api")
+	log.Debug("returning results from api")
 	c.cache.Set("result", hot, cache.DefaultExpiration)
 	return hot, nil
 }
 
 func (c *fastCollector) collect() (float64, error) {
-	log.Debug().Msg("collecting fast.com metrics")
+	log.Debug("collecting fast.com metrics")
 	return fast.Measure()
 }

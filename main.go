@@ -3,15 +3,13 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/caarlos0/fastcom-exporter/collector"
+	"github.com/charmbracelet/log"
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // nolint: gochecknoglobals
@@ -28,15 +26,16 @@ func main() {
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if *format == "console" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.SetLevel(log.InfoLevel)
+	if *format == "json" {
+		log.SetFormatter(log.JSONFormatter)
 	}
+
 	if *debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Debug().Msg("enabled debug mode")
+		log.SetLevel(log.DebugLevel)
+		log.Debug("enabled debug mode")
 	}
-	log.Info().Msgf("starting fastcom-exporter %s", version)
+	log.Infof("starting fastcom-exporter %s", version)
 
 	prometheus.MustRegister(collector.NewFastCollector(cache.New(*interval, *interval)))
 	http.Handle("/metrics", promhttp.Handler())
@@ -54,8 +53,8 @@ func main() {
 			`,
 		)
 	})
-	log.Info().Msgf("listening on %s", *bind)
+	log.Infof("listening on %s", *bind)
 	if err := http.ListenAndServe(*bind, nil); err != nil {
-		log.Fatal().Err(err).Msg("error starting server")
+		log.Fatal("error starting server", "err", err)
 	}
 }

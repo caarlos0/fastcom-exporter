@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/charmbracelet/log"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
@@ -88,11 +88,11 @@ func doMeasure(ctx context.Context, url string) (int64, error) {
 func findURLs() []string {
 	token := getToken()
 	url := fmt.Sprintf("https://api.fast.com/netflix/speedtest/v2?https=true&token=%s&urlCount=5", token)
-	log.Debug().Msgf("getting url list from %s", url)
+	log.Debug("getting url list", "url", url)
 
 	jsonData, err := getPage(url)
 	if err != nil {
-		log.Error().Err(err).Msgf("error getting fast page %s", url)
+		log.Error("error getting fast page", "url", url, "err", err)
 	}
 
 	var urls []string
@@ -101,7 +101,7 @@ func findURLs() []string {
 			continue
 		}
 		urls = append(urls, url[1])
-		log.Debug().Str("url", url[1]).Msg("got url")
+		log.Debug("got url", "url", url[1])
 	}
 
 	return urls
@@ -110,7 +110,7 @@ func findURLs() []string {
 func getToken() string {
 	fastBody, err := getPage(baseURL)
 	if err != nil {
-		log.Error().Err(err).Msg("error getting fast page")
+		log.Error("error getting fast page", "err", err)
 	}
 
 	scriptNames := jsRE.FindAllString(string(fastBody), 1)
@@ -118,16 +118,16 @@ func getToken() string {
 
 	scriptBody, err := getPage(scriptURL)
 	if err != nil {
-		log.Error().Err(err).Msg("error getting fast page")
+		log.Error("error getting fast page", "err", err)
 	}
 	tokens := tokenRE.FindAllString(string(scriptBody), 1)
 
 	if len(tokens) > 0 {
 		token := tokens[0][7 : len(tokens[0])-1]
-		log.Debug().Str("token", token).Msg("found token")
+		log.Debug("found token", "token", token)
 		return token
 	}
-	log.Warn().Msg("no token found")
+	log.Warn("no token found")
 	return ""
 }
 
