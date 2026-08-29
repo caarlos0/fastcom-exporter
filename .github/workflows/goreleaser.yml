@@ -13,29 +13,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v7
         with:
           go-version: ~1.16
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v4
       - name: Log in to docker.io
-        uses: redhat-actions/podman-login@v1
+        uses: redhat-actions/podman-login@v2
         with:
           username: caarlos0
           password: ${{ secrets.DOCKER_PASSWORD }}
           registry: docker.io
       - name: Log in to ghcr.io
-        uses: redhat-actions/podman-login@v1
+        uses: redhat-actions/podman-login@v2
         with:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GH_PAT }}
           registry: ghcr.io
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser-pro
           version: latest
